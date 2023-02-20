@@ -2,6 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import {
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,10 +11,10 @@ import {
   View,
 } from "react-native";
 import { theme } from "./color";
-import { Fontisto } from '@expo/vector-icons'; 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Fontisto } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const STORAGE_KEY = "@toDos"
+const STORAGE_KEY = "@toDos";
 
 export default function App() {
   const [working, setWorking] = useState(true);
@@ -23,22 +24,25 @@ export default function App() {
   const travel = () => setWorking(false);
   const work = () => setWorking(true);
   const onChangeText = (payload) => setText(payload);
-  const saveToDos = async (toSave) => {           // Asncstorage 저장
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
+  const saveToDos = async (toSave) => {
+    // Asncstorage 저장
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   };
-  const loadToDos = async () => {                 // Asncstorage 가져오기
-    try{
-    const s = await AsyncStorage.getItem(STORAGE_KEY)
-    if(s){
-    setToDos(JSON.parse(s));  // string을 JS object로 만들어주기
-  }
-  }catch (e) {
-    console.log("ERROR!");
-  }
-  }
-  useEffect(() => {            // 컴포넌트 마운트 됐을 때
+  const loadToDos = async () => {
+    // Asncstorage 가져오기
+    try {
+      const s = await AsyncStorage.getItem(STORAGE_KEY);
+      if (s) {
+        setToDos(JSON.parse(s)); // string을 JS object로 만들어주기
+      }
+    } catch (e) {
+      console.log("ERROR!");
+    }
+  };
+  useEffect(() => {
+    // 컴포넌트 마운트 됐을 때
     loadToDos();
-  },[])
+  }, []);
   const addToDo = async () => {
     if (text === "") {
       return;
@@ -50,25 +54,36 @@ export default function App() {
     setText("");
   };
   const deleteToDo = (key) => {
-    Alert.alert("Delete To Do", "Are you sure?", [
-      {text: "Cancel"},
-      {text: "I'm Sure",
-      style: "destructive",
-      onPress: async () => {
-        const newToDos = {...toDos}
-        delete newToDos[key]
+    if (Platform.OS === "web") {
+      const ok = confirm("Do you want to delete this To Do?")
+      if(ok){
+        const newToDos = { ...toDos };
+        delete newToDos[key];
         setToDos(newToDos);
-        await saveToDos(newToDos);
-      },
-    },
-    ]);
+        saveToDos(newToDos);
+      }
+    } else {
+      Alert.alert("Delete To Do", "Are you sure?", [
+        { text: "Cancel" },
+        {
+          text: "I'm Sure",
+          style: "destructive",
+          onPress: async () => {
+            const newToDos = { ...toDos };
+            delete newToDos[key];
+            setToDos(newToDos);
+            await saveToDos(newToDos);
+          },
+        },
+      ]);
+    }
   };
- // onPress= onPressIn + onPressOut  //
+  // onPress= onPressIn + onPressOut  //
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={work}>      
+        <TouchableOpacity onPress={work}>
           <Text
             style={{ ...styles.btnText, color: working ? "white" : theme.grey }}
           >
@@ -89,7 +104,7 @@ export default function App() {
       <View>
         <TextInput
           onSubmitEditing={addToDo}
-          onChangeText={onChangeText}   // text가 바뀔 때 실행되는 함수
+          onChangeText={onChangeText} // text가 바뀔 때 실행되는 함수
           style={styles.input}
           value={text}
           placeholder={working ? "Add a To Do" : "Where do you want to go?"}
@@ -97,14 +112,15 @@ export default function App() {
       </View>
       <ScrollView>
         {Object.keys(toDos).map((key) =>
-          (toDos[key].working === working ? 
+          toDos[key].working === working ? (
             <View key={key} style={styles.toDo}>
               <Text style={styles.toDoText}>{toDos[key].text}</Text>
               <TouchableOpacity onPress={() => deleteToDo(key)}>
-              <Fontisto name="trash" size={18} color="white" />
+                <Fontisto name="trash" size={18} color="white" />
               </TouchableOpacity>
-            </View> : null
-           ))}
+            </View>
+          ) : null
+        )}
       </ScrollView>
     </View>
   );
